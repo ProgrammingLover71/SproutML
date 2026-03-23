@@ -567,9 +567,36 @@ class Population:
         
         for _ in range(num_genomes):
             self.genomes.append(Genome(num_inputs, num_outputs, activation))
+    
+
+    def fittest(self) -> Genome:
+        """
+        Returns the fittest genome in the entire population.
+        """
+        max_fit = self.genomes[0].fitness
+        best: Genome = Genome(0, 0, 'relu')     # Default (empty) genome
+        
+        for gen in self.genomes:
+
+            if gen.fitness > max_fit:
+                max_fit = gen.fitness
+                best = gen
+        
+        return best
         
 
 ##============ Evolution Loop ============##
 
 
-def evolve(pop: Population): pass
+def evolve(pop: Population, num_epochs: int = 100, mutation_rate: float = 0.05) -> Population:
+    """
+    Evolves a population of genomes over a specified amount of epochs using NEAT.
+
+    Args:
+        pop (Population): The population to evolve.
+        num_epochs (int, optional - default 100): How many epochs to evolve the popoulation for.
+		mutation_rate (float, optional - default 0.05): How often to mutate genoms in the child population after crossover (should be between 0.0 and 1.0).
+    
+    Returns:
+        The final `Population` after `num_epochs` epochs of evolution.
+    """

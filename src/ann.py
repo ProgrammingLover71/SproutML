@@ -124,9 +124,9 @@ class NeuralNetwork:
 		Performs backpropagation to compute gradients and update weights/biases.
 		
 		Args:
-			predictions (np.ndarray): The output from forward pass
-			targets (np.ndarray): The expected output
-			learning_rate (float): Controls the magnitude of weight updates
+			predictions (np.ndarray): The output from forward pass.
+			targets (np.ndarray): The expected output.
+			learning_rate (float, optional - default 0.05): Controls the magnitude of weight updates.
 		"""
 		
 		# Compute initial error (gradient of loss w.r.t. output)
@@ -190,15 +190,15 @@ class NeuralNetwork:
 ##============ Training Loop ============##
 
 
-def train(net: NeuralNetwork, inputs: list[ArrayLike], targets: list[ArrayLike], epochs: int = 100, learning_rate: float = 0.01, show_msg: bool = False) -> np.ndarray:
+def train(net: NeuralNetwork, inputs: list[ArrayLike], targets: list[ArrayLike], epochs: int = 100, learning_rate: float = 0.05, show_msg: bool = False) -> np.ndarray:
 	"""
 	Trains a neural network using forward and backward propagation over multiple epochs.
 
 	Args:
 		inputs (list[ArrayLike]): A list of training input arrays, where each array represents a single sample.
 		targets (list[ArrayLike]): A list of target output arrays, where each array represents the expected output for the corresponding input sample.
-		epochs (int, optional - default 100): Number of training iterations. Defaults to 100.
-		learning_rate (float, optional - default 0.01): Step size for weight updates during backpropagation. Defaults to 0.01.
+		epochs (int, optional - default 100): Number of training iterations.
+		learning_rate (float, optional - default 0.05): Step size for weight updates during backpropagation.
 		show_msg (bool, optional - default False): Whether to show the best loss and epoch every 100 epochs.
 
 	Returns:
