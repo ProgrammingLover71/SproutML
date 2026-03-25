@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sproutml"
+version = "0.1.0"
+description = "A small, easy-to-learn machine learning library"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "steak", email = "abcbcalol69@gmail.com"},
+]
+maintainers = [
+    {name = "steak", email = "abcbcalol69@gmail.com"},
+]
+keywords = ["machine-learning", "neat", "neural-networks", "evolution"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.21.0",  # Based on your imports
+]
+
+[project.urls]
+Homepage = "https://github.com/ProgrammingLover71/SproutML"
+Repository = "https://github.com/ProgrammingLover71/SproutML"
+Issues = "https://github.com/ProgrammingLover71/SproutML/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]

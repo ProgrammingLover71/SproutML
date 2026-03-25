@@ -8,7 +8,7 @@ from typing import Literal
 ##============ Value Types ============##
 
 
-activation_func = Literal['sigmoid', 'relu', 'tanh']
+activation_func = Literal['sigmoid', 'relu', 'silu', 'tanh']
 loss_func 		= Literal['mse', 'cross_entropy']
 scalar			= int | float
 
@@ -20,6 +20,8 @@ def get_activation_function(name: activation_func):
 		return relu
 	elif name == 'tanh':
 		return tanh
+	elif name == 'silu':
+		return silu
 	else:
 		raise ValueError(f"Unsupported activation function: {name}")
 	
@@ -31,6 +33,8 @@ def get_activation_derivative(name: activation_func):
 		return relu_derivative
 	elif name == 'tanh':
 		return tanh_derivative
+	elif name == 'silu':
+		return silu_derivative
 	else:
 		raise ValueError(f"Unsupported activation function: {name}")
 
@@ -78,6 +82,18 @@ def tanh(x: float | np.ndarray) -> float | np.ndarray:
 def tanh_derivative(x: float | np.ndarray) -> float | np.ndarray:
 	"""Computes the derivative of the tanh function."""
 	return 1 - np.tanh(x) ** 2
+
+#------ Sigmoid Linear Unit (SiLU) ------#
+
+def silu(x: float | np.ndarray) -> float | np.ndarray:
+	"""The Sigmoid Linear Unit (SiLU) is a smoothed version of ReLU, using the sigmoid function as its base."""
+	return x * sigmoid(x)
+
+def silu_derivative(x: float | np.ndarray) -> float | np.ndarray:
+	"""Computes the derivative of the SiLU function."""
+	A = x + np.sinh(x)
+	B = 4 * np.cosh(x / 2.0) ** 2
+	return A / B + 0.5
 
 
 ##============ Loss Functions ============##

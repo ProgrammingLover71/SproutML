@@ -6,7 +6,7 @@ from typing import Callable, Literal
 import copy
 import numpy as np
 import random
-from .activation import *
+from .activations import *
 
 
 ##============ Node & Connection Genes ============##

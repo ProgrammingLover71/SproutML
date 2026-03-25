@@ -1,4 +1,4 @@
-from src.neat import Genome, Population, Species, evolve, reset_innovation_counters
+from src.neuroevolution import Genome, Population, Species, evolve, reset_innovation_counters
 
 
 def test_genome_forward():

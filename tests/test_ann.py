@@ -1,5 +1,5 @@
 import numpy as np
-from src.ann import NeuralNetwork, train
+from src.neural_network import NeuralNetwork, train
 
 
 def test_ann_forward_shape():
