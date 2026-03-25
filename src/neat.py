@@ -1,6 +1,9 @@
 ##============ Imports ===========##
 
 
+from typing import Callable, Literal
+
+import copy
 import numpy as np
 import random
 from .activation import *
@@ -67,7 +70,7 @@ class ConnectionGene:
 ##============ Innovation Number and Node ID counter ============##
 
 
-_global_node_id_counter: int = 0
+_global_node_id_counter: int = 1000
 
 _global_innovation_counter: int = 0
 _global_innovation_map: dict[tuple[int, int], int] = {}
@@ -109,6 +112,14 @@ def new_node_id() -> int:
     return _global_node_id_counter
 
 
+def reset_innovation_counters() -> None:
+    """Resets innovation/node counters for deterministic reproducibility."""
+    global _global_node_id_counter, _global_innovation_counter, _global_innovation_map
+    _global_node_id_counter = 1000
+    _global_innovation_counter = 0
+    _global_innovation_map = {}
+
+
 ##============ Genomes ============##
 
 
@@ -133,16 +144,12 @@ class Genome:
         self.nodes: dict[int, NodeGene]         = {}
         self.conns: dict[int, ConnectionGene]   = {}
 
-        # Add nodes
-        for _ in range(num_inputs):
-
-            id = new_node_id()
-            self.nodes[id] = NodeGene(id, 'input', activation)
+        # Add nodes with fixed IDs
+        for i in range(num_inputs):
+            self.nodes[i] = NodeGene(i, 'input', activation)
         
-        for _ in range(num_outputs):
-
-            id = new_node_id()
-            self.nodes[id] = NodeGene(id, 'output', activation)
+        for i in range(num_outputs):
+            self.nodes[num_inputs + i] = NodeGene(num_inputs + i, 'output', activation)
 
         # Separate node IDs
         input_ids = [nid for nid, n in self.nodes.items() if n.type == "input"]
@@ -166,7 +173,7 @@ class Genome:
     
     #------------------------------------------------------------------------------------------------#
 
-    def forward(self, inputs: list[float]) -> list[float | np.ndarray]:
+    def forward(self, inputs: list[float]) -> list[float]:
         """
         Feeds the specified inputs through the genome, returning the its output.
 
@@ -177,7 +184,7 @@ class Genome:
             A `list[float]` containing the outputs of the genome.
         """
 
-        values: dict[int, float | np.ndarray] = {node_id: 0.0 for node_id in self.nodes}
+        values: dict[int, float] = {node_id: 0.0 for node_id in self.nodes}
 
         # 1. Stable input ordering
         input_nodes = sorted(
@@ -199,22 +206,31 @@ class Genome:
             if conn.enabled:
                 incoming[conn.out_id].append(conn)
 
-        # 3. Topological order
-        order = self.topological_sort()
+        # 3. Topological order (cycles are handled implicitly)
+        order = self.topological_sort(allow_cycles=True)
 
-        # 4. Forward pass
-        for node_id in order:
+        def update_values() -> float:
+            max_delta = 0.0
+            for node_id in order:
+                node = self.nodes[node_id]
+                if node.type == "input":
+                    continue
 
-            node = self.nodes[node_id]
+                total = 0.0
+                for conn in incoming[node_id]:
+                    total += values[conn.in_id] * conn.weight
 
-            if node.type == "input":
-                continue
+                new_val = float(node.activation(total))
+                max_delta = max(max_delta, abs(new_val - values[node_id]))
+                values[node_id] = new_val
 
-            total = 0.0
-            for conn in incoming[node_id]:
-                total += values[conn.in_id] * conn.weight
+            return max_delta
 
-            values[node_id] = float(node.activation(total))
+        # 4. Forward pass with recurrent convergence on cycles
+        update_values()  # first pass
+        for _ in range(9):  # additional iterations for cyclic paths
+            if update_values() < 1e-6:
+                break
 
         # 5. Stable output ordering
         output_nodes = sorted(
@@ -226,10 +242,10 @@ class Genome:
     
     #------------------------------------------------------------------------------------------------#
 
-    def topological_sort(self) -> list[int]:
+    def topological_sort(self, allow_cycles: bool = True) -> list[int]:
         """
         Topologically sorts the nodes of the network.
-        (thx chatgpt <3)
+        If a cycle exists and allow_cycles=True, the remaining nodes are appended in numerical order.
         """
 
         in_degree = {nid: 0 for nid in self.nodes}
@@ -255,7 +271,11 @@ class Genome:
                         queue.append(conn.out_id)
 
         if len(order) != len(self.nodes):
-            raise RuntimeError("Cycle detected in network")
+            if not allow_cycles:
+                raise RuntimeError("Cycle detected in network")
+
+            remaining = sorted(set(self.nodes.keys()) - set(order))
+            order.extend(remaining)
 
         return order
     
@@ -263,54 +283,60 @@ class Genome:
 
     def add_node(self, in_node: int, out_node: int) -> None:
         """
-        Splits a connection between two nodes, adding a middle node.
+        Splits an enabled connection between two nodes, inserting a hidden node and two new connections.
 
         Args:
             in_node (int): The ID of the start node.
             out_node (int): The ID of the end node.
         """
-        innovation = new_innovation_number(in_node, out_node)
 
-        # Create a new node
+        if in_node == out_node:
+            raise ValueError("Cannot add node on self-loop")
+
+        old_innovation = new_innovation_number(in_node, out_node)
+
+        if old_innovation not in self.conns or not self.conns[old_innovation].enabled:
+            raise ValueError(f"Connection {in_node}->{out_node} is missing or disabled and cannot be split")
+
+        old_connection = self.conns[old_innovation]
+
         new_node = NodeGene(new_node_id(), 'hidden', self._activation)
-        
-        # Create connection in->new
-        inn1  = new_innovation_number(in_node, new_node.id)
-        conn1 = ConnectionGene(in_node, new_node.id, self.conns[innovation].weight, inn1)
 
-        # Create connection new->out
-        inn2  = new_innovation_number(new_node.id, out_node)
+        # split the connection
+        inn1 = new_innovation_number(in_node, new_node.id)
+        conn1 = ConnectionGene(in_node, new_node.id, old_connection.weight, inn1)
+
+        inn2 = new_innovation_number(new_node.id, out_node)
         conn2 = ConnectionGene(new_node.id, out_node, 1.0, inn2)
 
-        # Register connections and node
         self.nodes[new_node.id] = new_node
-
         self.conns[inn1] = conn1
         self.conns[inn2] = conn2
 
-        # Disable the old connection, if any
-        if innovation in self.conns.keys():
-            self.conns[innovation].enabled = False
+        old_connection.enabled = False
     
 
     def add_connection(self, in_node: int, out_node: int) -> None:
         """
-        Adds a new connection between two nodes.
-        If the connection already exists, it is enabled.
-
-        Args:
-            in_node (int): The ID of the start node.
-            out_node (int): The ID of the end node.
+        Adds a new (or re-enables existing) connection between two nodes.
         """
+        if in_node == out_node:
+            return
+
+        if in_node not in self.nodes or out_node not in self.nodes:
+            raise ValueError("Node IDs must exist in the genome")
+
+        if self.nodes[out_node].type == 'input':
+            # Do not connect into input nodes
+            return
+
         innovation = new_innovation_number(in_node, out_node)
 
-        if innovation in self.conns.keys():
+        if innovation in self.conns:
             self.conns[innovation].enabled = True
-        
-        else:
+            return
 
-            conn = ConnectionGene(in_node, out_node, np.random.uniform(-1, 1), innovation)
-            self.conns[innovation] = conn
+        self.conns[innovation] = ConnectionGene(in_node, out_node, np.random.uniform(-1, 1), innovation)
     
     #------------------------------------------------------------------------------------------------#
 
@@ -364,14 +390,24 @@ class Genome:
 
             # Cases 2 & 3 -- Disjoint or Excess genes
             elif gene1 and not gene2:
-                # Inherit from gen1 only if it's the fittest
                 if fittest == gen1:
-                    child.conns[inn] = gene1
-            
+                    child.conns[inn] = ConnectionGene(
+                        in_id = gene1.in_id,
+                        out_id = gene1.out_id,
+                        weight = gene1.weight,
+                        innovation = gene1.innovation,
+                        enabled = gene1.enabled
+                    )
+
             elif gene2 and not gene1:
-                # Inherit from gen2 only if it's the fittest
                 if fittest == gen2:
-                    child.conns[inn] = gene2
+                    child.conns[inn] = ConnectionGene(
+                        in_id = gene2.in_id,
+                        out_id = gene2.out_id,
+                        weight = gene2.weight,
+                        innovation = gene2.innovation,
+                        enabled = gene2.enabled
+                    )
 
         # STEP 2: Inherit nodes
         # ------------ #
@@ -380,12 +416,18 @@ class Genome:
             node_ids.add(conn.in_id)
             node_ids.add(conn.out_id)
 
-        # Also ensure input/output nodes are included
-        node_ids.update(gen1.nodes.keys())
-        node_ids.update(gen2.nodes.keys())
+        # Add hidden nodes from parents
+        for gen in [gen1, gen2]:
+
+            for nid, node in gen.nodes.items():
+                if node.type == 'hidden':
+                    node_ids.add(nid)
 
         # Build child nodes
         for nid in node_ids:
+            if nid in child.nodes:
+                continue  # input/output already set
+
             n1 = gen1.nodes.get(nid)
             n2 = gen2.nodes.get(nid)
 
@@ -405,16 +447,45 @@ class Genome:
             else:
                 continue  # shouldn't happen
 
-            chosen_type: node_type = chosen_node.type
-            child.nodes[nid] = NodeGene(
-                id = chosen_node.id,
-                type = chosen_type  # or whatever fields you store
-            )
+            if chosen_node.type == 'hidden':  # only add hidden nodes from parents
+                child.nodes[nid] = NodeGene(
+                    id = nid,
+                    type = chosen_node.type,
+                    activation = child._activation
+                )
 
         return child
-    
 
-##============ Species ============##
+    def mutate(self, mutation_rate: float = 0.05, add_connection_rate: float = 0.05, add_node_rate: float = 0.03, weight_perturb_scale: float = 0.5) -> None:
+        """Mutates this genome in place."""
+
+        # Weight perturbation
+        for conn in self.conns.values():
+            if random.random() < mutation_rate:
+                conn.weight += np.random.normal(0, weight_perturb_scale)
+
+        # Add a new connection
+        if random.random() < add_connection_rate and len(self.nodes) >= 2:
+            possible_in = [nid for nid, n in self.nodes.items() if n.type != 'output']
+            possible_out = [nid for nid, n in self.nodes.items() if n.type != 'input']
+
+            if possible_in and possible_out:
+                in_node = random.choice(possible_in)
+                out_node = random.choice(possible_out)
+
+                if in_node != out_node and not any(c.in_id == in_node and c.out_id == out_node for c in self.conns.values()):
+                    self.add_connection(in_node, out_node)
+
+        # Add a new node by splitting an existing connection
+        if random.random() < add_node_rate:
+            enabled_conns = [c for c in self.conns.values() if c.enabled]
+            if enabled_conns:
+                conn = random.choice(enabled_conns)
+                # Ensure we don't add a node on a disabled connection
+                self.add_node(conn.in_id, conn.out_id)
+
+
+##============ Species ===========##
 
 
 class Species:
@@ -435,9 +506,11 @@ class Species:
     
     def fitness(self) -> float:
         """Returns the fitness of this species."""
-        
+        if not self.genomes:
+            return 0.0
+
         # Species adjust fitness: larger ones are penalized, while smaller ones are boosted
-        return sum([gen.fitness for gen in self.genomes]) / len(self.genomes)
+        return sum(gen.fitness for gen in self.genomes) / len(self.genomes)
     
 
     def representative(self) -> Genome:
@@ -445,15 +518,17 @@ class Species:
         Returns the representative of this species.
         The representative is the genome with the highest fitness.
         """
-        max_fit = self.genomes[0].fitness
-        best: Genome = Genome(0, 0, 'relu')     # Default (empty) genome
-        
-        for gen in self.genomes:
+        if not self.genomes:
+            raise ValueError("Species contains no genomes")
 
+        best = self.genomes[0]
+        max_fit = best.fitness
+
+        for gen in self.genomes[1:]:
             if gen.fitness > max_fit:
                 max_fit = gen.fitness
                 best = gen
-        
+
         return best
 
 
@@ -476,7 +551,7 @@ class Species:
         g1_genes = gen1.conns
         g2_genes = gen2.conns
 
-        all_gene_inns = set(g1_genes.keys()).union(g2_genes)
+        all_gene_inns = set(g1_genes.keys()).union(set(g2_genes.keys()))
 
         matching: list[float] = []
         disjoint: int = 0
@@ -573,30 +648,70 @@ class Population:
         """
         Returns the fittest genome in the entire population.
         """
-        max_fit = self.genomes[0].fitness
-        best: Genome = Genome(0, 0, 'relu')     # Default (empty) genome
-        
-        for gen in self.genomes:
+        if not self.genomes:
+            raise ValueError("Population contains no genomes")
 
+        best = self.genomes[0]
+        max_fit = best.fitness
+
+        for gen in self.genomes[1:]:
             if gen.fitness > max_fit:
                 max_fit = gen.fitness
                 best = gen
-        
+
         return best
         
 
 ##============ Evolution Loop ============##
 
 
-def evolve(pop: Population, num_epochs: int = 100, mutation_rate: float = 0.05) -> Population:
+def evolve(pop: Population, fitness: Callable[[Genome], float], num_epochs: int = 100, mutation_rate: float = 0.05) -> Population:
     """
-    Evolves a population of genomes over a specified amount of epochs using NEAT.
+    Evolves a population of genomes over a specified amount of epochs using a simple NEAT cycle.
 
     Args:
         pop (Population): The population to evolve.
-        num_epochs (int, optional - default 100): How many epochs to evolve the popoulation for.
-		mutation_rate (float, optional - default 0.05): How often to mutate genoms in the child population after crossover (should be between 0.0 and 1.0).
-    
+        num_epochs (int, optional - default 100): How many epochs to evolve the population for.
+        mutation_rate (float, optional - default 0.05): Base mutation chance when altering weights.
+
     Returns:
         The final `Population` after `num_epochs` epochs of evolution.
     """
+
+    num_genomes = len(pop.genomes)
+
+    for _ in range(num_epochs):
+
+        # Evaluate fitness for all genomes
+        for gen in pop.genomes:
+            gen.fitness = fitness(gen)
+
+        # Sort by fitness descending
+        sorted_genomes = sorted(pop.genomes, key=lambda g: g.fitness, reverse=True)
+
+        # Elitism: keep top 2
+        new_genomes: list[Genome] = []
+        if num_genomes > 0:
+            new_genomes.append(copy.deepcopy(sorted_genomes[0]))
+        if num_genomes > 1:
+            new_genomes.append(copy.deepcopy(sorted_genomes[1]))
+
+        # Reproduction loop
+        while len(new_genomes) < num_genomes:
+
+            # Tournament selection
+            parents = random.sample(sorted_genomes[:max(2, len(sorted_genomes) // 2)], k=2) if len(sorted_genomes) >= 2 else [sorted_genomes[0], sorted_genomes[0]]
+            child = Genome.crossover(parents[0], parents[1])
+
+            # Mutate child
+            child.mutate(mutation_rate=mutation_rate)
+
+            new_genomes.append(child)
+
+        pop.genomes = new_genomes
+
+    # Final evaluation to keep fitness up-to-date
+    for gen in pop.genomes:
+        gen.fitness = fitness(gen)
+
+    return pop
