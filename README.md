@@ -33,6 +33,16 @@ net = NeuralNetwork(
     activation_function = 'tanh',   # Sigmoid, ReLU, SiLU and GeLU are also supported
     loss_function = 'cross-entropy' # MSE supported too
 )
+
+# Inputs
+X = [[0, 0], [0, 1], [1, 0], [1, 1]]
+# Predicted outputs
+yp = [[0], [1], [1], [0]]
+
+# show_msg = True makes the function display epoch numbers and the fitness every 100 epochs
+losses = train(net, X, yp, epochs = 1000, learning_rate = 0.15, show_msg = True)
+
+print(net.forward([0, 1]))   # Should be close to yp
 ```
 
 # Philosophy
