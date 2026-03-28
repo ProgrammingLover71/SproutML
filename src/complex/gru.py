@@ -72,13 +72,13 @@ class GRULayer(RecurrentLayer):
         for t in range(x.shape[0]):
 
             x_t = x[t:t+1]
-            a_z = np.dot(x_t, self.W_z) + np.dot(h, self.U_z) + self.b_z
+            a_z = x_t @ self.W_z + h @ self.U_z + self.b_z
 
             z = 1 / (1 + np.exp(-a_z))
-            a_r = np.dot(x_t, self.W_r) + np.dot(h, self.U_r) + self.b_r
+            a_r = x_t @ self.W_r + h @ self.U_r + self.b_r
 
             r = 1 / (1 + np.exp(-a_r))
-            a_h = np.dot(x_t, self.W_h) + np.dot(r * h, self.U_h) + self.b_h
+            a_h = x_t @ self.W_h + (r * h) @ self.U_h + self.b_h
 
             h_tilde = np.tanh(a_h)
 
@@ -162,27 +162,27 @@ class GRULayer(RecurrentLayer):
             dz = dh * (h_tilde - h_prev)
             da_z = dz * z * (1 - z)
 
-            dr = np.dot(da_h, self.U_h.T) * h_prev
+            dr = da_h @ self.U_h.T * h_prev
             da_r = dr * r * (1 - r)
 
-            dW_h += np.dot(x_t.T, da_h)
-            dU_h += np.dot((r * h_prev).T, da_h)
+            dW_h += x_t.T @ da_h
+            dU_h += (r * h_prev).T @ da_h
             db_h += da_h
 
-            dW_z += np.dot(x_t.T, da_z)
-            dU_z += np.dot(h_prev.T, da_z)
+            dW_z += x_t.T @ da_z
+            dU_z += h_prev.T @ da_z
             db_z += da_z
 
-            dW_r += np.dot(x_t.T, da_r)
-            dU_r += np.dot(h_prev.T, da_r)
+            dW_r += x_t.T @ da_r
+            dU_r += h_prev.T @ da_r
             db_r += da_r
 
-            dx[t] = np.dot(da_h, self.W_h.T) + np.dot(da_z, self.W_z.T) + np.dot(da_r, self.W_r.T)
+            dx[t] = da_h @ self.W_h.T + da_z @ self.W_z.T + da_r @ self.W_r.T
 
             dh_prev = dh * (1 - z)
-            dh_prev += np.dot(da_h, self.U_h.T) * r
-            dh_prev += np.dot(da_z, self.U_z.T)
-            dh_prev += np.dot(da_r, self.U_r.T)
+            dh_prev += da_h @ self.U_h.T * r
+            dh_prev += da_z @ self.U_z.T
+            dh_prev += da_r @ self.U_r.T
 
             dh_next = dh_prev
 

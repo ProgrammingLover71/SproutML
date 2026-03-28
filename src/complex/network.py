@@ -1,13 +1,5 @@
-##============ Imports ============##
-
-
 from src.complex.layer import *
-
 import numpy as np
-
-
-##============ Network Class ============##
-
 
 class Network:
     """
@@ -23,7 +15,7 @@ class Network:
             layers (list[Layer]): A list of Layer instances that make up the neural network.
         """
         self.layers = layers
-    
+
 
     def forward(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -50,11 +42,10 @@ class Network:
         """
         for layer in reversed(self.layers):
             output_gradient = layer.backward(output_gradient, eta)
-        
         return output_gradient
     
 
-    def train(self, X: np.ndarray, y: np.ndarray, loss_function: loss_func, epochs: int, eta: float, show_progress: bool = True) -> list[float]:
+    def train(self, X: np.ndarray, y: np.ndarray, loss_function: loss_func, epochs: int, eta: float, show_progress: bool=True) -> list[float]:
         """
         Trains the neural network on the provided dataset for a specified number of epochs.
         
@@ -69,33 +60,28 @@ class Network:
         Returns:
             list[float]: A list of loss values for each epoch during training.
         """
+
         loss_fn = get_loss_function(loss_function)
         loss_dr = get_loss_derivative(loss_function)
 
         losses = []
-        
         for epoch in range(epochs):
-
-            # Forward pass
+        
             output = self.forward(X)
 
-            # Compute loss
             loss = loss_fn(output, y)
             losses.append(loss)
 
-            # Compute output gradient
             output_gradient = loss_dr(output, y)
-
-            # Backward pass
             self.backward(output_gradient, eta)
 
             if show_progress:
-                print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}")
-        
+                print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}')
+
         return losses
     
 
-    def train_multi(self, X: list[np.ndarray] | np.ndarray, y: list[np.ndarray] | np.ndarray, loss_function: loss_func, generations: int, eta: float, num_epochs_per_generation: int, show_progress: bool = True) -> list[float]:
+    def train_multi(self, X: list[np.ndarray] | np.ndarray, y: list[np.ndarray] | np.ndarray, loss_function: loss_func, generations: int, eta: float, num_epochs_per_generation: int, show_progress: bool=True) -> list[float]:
         """
         Trains the neural network on multiple input-target pairs for a specified number of epochs.
         
@@ -111,28 +97,27 @@ class Network:
         Returns:
             list[float]: A list of average loss values for each generation during training.
         """
+
         losses = []
-        
-        # Handle np.ndarray inputs
+
         if isinstance(X, np.ndarray) and X.ndim == 2:
             X_list = [X[i].reshape(1, -1) for i in range(X.shape[0])]
         else:
             X_list = X
-        
+
         if isinstance(y, np.ndarray) and y.ndim == 2:
             y_list = [y[i].reshape(1, -1) for i in range(y.shape[0])]
         else:
             y_list = y
-        
+
         for generation in range(generations):
-            
+
             for X_i, y_i in zip(X_list, y_list):
 
-                ep_losses = self.train(X_i, y_i, loss_function, epochs = num_epochs_per_generation, eta = eta, show_progress = show_progress)
+                ep_losses = self.train(X_i, y_i, loss_function, epochs=num_epochs_per_generation, eta=eta, show_progress=show_progress)
                 losses.append(np.mean(ep_losses))
-            
-            if show_progress:
-                print(f"    [ Generation {generation + 1}/{generations}, Average Loss: {losses[-1]:.4f} ]")
-        
-        return losses
 
+            if show_progress:
+                print(f'    [ Generation {generation + 1}/{generations}, Average Loss: {losses[-1]:.4f} ]')
+
+        return losses

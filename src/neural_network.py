@@ -109,7 +109,7 @@ class NeuralNetwork:
 		for weight_set in self.weights:
 
 			# Calculate the weighted sum for the next layer
-			weighted_sum = np.dot(weight_set.weights, current_layer) + weight_set.biases
+			weighted_sum = weight_set.weights @ current_layer + weight_set.biases
 
 			# Apply the activation function
 			current_layer = np.asarray(self.activation_function(weighted_sum))
@@ -157,7 +157,7 @@ class NeuralNetwork:
 			
 			# Compute error for the previous layer
 			# error_prev = dL/d(pre-activation) @ weights = error @ weights^T
-			error = np.dot(weight_set.weights.T, error)
+			error = weight_set.weights.T @ error
 			
 			# Update weights and biases
 			weight_set.weights -= learning_rate * dW
@@ -178,7 +178,7 @@ class NeuralNetwork:
 		
 		for weight_set in self.weights:
 
-			weighted_sum = np.dot(weight_set.weights, current_layer) + weight_set.biases
+			weighted_sum = weight_set.weights @ current_layer + weight_set.biases
 			self.layer_preactivations.append(weighted_sum)
 
 			current_layer = np.asarray(self.activation_function(weighted_sum))

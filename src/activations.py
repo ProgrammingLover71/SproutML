@@ -102,7 +102,7 @@ def silu_derivative(x: float | np.ndarray) -> float | np.ndarray:
 	"""Computes the derivative of the SiLU function."""
 	A = x + np.sinh(x)
 	B = 4 * np.cosh(x / 2.0) ** 2
-	return A / B + 0.5
+	return A / B + (1 / 2)
 
 
 ##============ Loss Functions ============##

@@ -115,6 +115,7 @@ def new_node_id() -> int:
 def reset_innovation_counters() -> None:
     """Resets innovation/node counters for deterministic reproducibility."""
     global _global_node_id_counter, _global_innovation_counter, _global_innovation_map
+    
     _global_node_id_counter = 1000
     _global_innovation_counter = 0
     _global_innovation_map = {}

@@ -85,12 +85,12 @@ class RecurrentLayer(Layer):
             np.ndarray: Gradient w.r.t. the input.
         """
         raise NotImplementedError("RecurrentLayer.backward() should be implemented by a subclass")
-    
+
 
 ##============ Layer subclasses ============##
 
 
-#------ Dense Layer ------#
+# ------ Dense Layer ------#
 
 class DenseLayer(Layer):
     """
@@ -117,7 +117,6 @@ class DenseLayer(Layer):
 
         self.weights = np.random.uniform(-1, 1, (input_size, output_size))
         self.biases  = np.random.uniform(-1, 1, (1, output_size))
-    
 
     def forward(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -132,11 +131,10 @@ class DenseLayer(Layer):
 
         self.inputs = inputs
 
-        self.linear_output    = np.dot(inputs, self.weights) + self.biases
+        self.linear_output    = inputs @ self.weights + self.biases
         self.activated_output = self.activation(self.linear_output)
 
         return self.activated_output    # type: ignore -- the return type will be np.ndarray, but the activation returns float or np.ndarray depending on the input
-    
 
     def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
         """
@@ -154,9 +152,9 @@ class DenseLayer(Layer):
         transposed_inputs  = self.inputs.T      # type: np.ndarray
 
         activation_gradient = self.activation_derivative(self.linear_output) * output_gradient  # type: np.ndarray
-        input_gradient      = np.dot(activation_gradient, transposed_weights)                   # type: np.ndarray
+        input_gradient      = activation_gradient @ transposed_weights                   # type: np.ndarray
 
-        weights_gradient    = np.dot(transposed_inputs, activation_gradient)                    # type: np.ndarray
+        weights_gradient    = transposed_inputs @ activation_gradient                    # type: np.ndarray
         biases_gradient     = np.sum(activation_gradient, axis=0, keepdims=True)                # type: np.ndarray
 
         # Update weights and biases
@@ -166,12 +164,12 @@ class DenseLayer(Layer):
         return input_gradient
 
 
-#------ GRU Layer (imported) ------#
+# ------ GRU Layer (imported) ------#
 
 from src.complex.gru import GRULayer    # Import it here to avoid circular import
 
 
-#------ Sigmoid Layer (Yes / No) ------#
+# ------ Sigmoid Layer (Yes / No) ------#
 
 class Sigmoid(Layer):
     """
@@ -207,7 +205,7 @@ class Sigmoid(Layer):
         return output_gradient * sigmoid_output * (1 - sigmoid_output)  # type: np.ndarray
 
 
-#------ Softmax Layer (Classification) ------#
+# ------ Softmax Layer (Classification) ------#
 
 class Softmax(Layer):
     """
