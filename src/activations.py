@@ -8,7 +8,7 @@ from typing import Literal
 ##============ Value Types ============##
 
 
-activation_func = Literal['sigmoid', 'relu', 'silu', 'tanh']
+activation_func = Literal['sigmoid', 'relu', 'silu', 'gelu', 'tanh']
 loss_func 		= Literal['mse', 'cross_entropy']
 scalar			= int | float
 
@@ -18,6 +18,8 @@ def get_activation_function(name: activation_func):
 		return sigmoid
 	elif name == 'relu':
 		return relu
+	elif name == 'gelu':
+		return gelu
 	elif name == 'tanh':
 		return tanh
 	elif name == 'silu':
@@ -31,10 +33,12 @@ def get_activation_derivative(name: activation_func):
 		return sigmoid_derivative
 	elif name == 'relu':
 		return relu_derivative
-	elif name == 'tanh':
-		return tanh_derivative
 	elif name == 'silu':
 		return silu_derivative
+	elif name == 'gelu':
+		return gelu_derivative
+	elif name == 'tanh':
+		return tanh_derivative
 	else:
 		raise ValueError(f"Unsupported activation function: {name}")
 
@@ -43,7 +47,7 @@ def get_loss_function(name: loss_func):
 	if name == 'mse':
 		return mean_squared_error
 	elif name == 'cross_entropy':
-		return cross_entropy_loss
+		return cross_entropy
 	else:
 		raise ValueError(f"Unsupported loss function: {name}")
 
@@ -52,7 +56,7 @@ def get_loss_derivative(name: loss_func):
 	if name == 'mse':
 		return mean_squared_error_dr
 	elif name == 'cross_entropy':
-		return cross_entropy_loss_dr
+		return cross_entropy_dr
 	else:
 		raise ValueError(f"Unsupported loss function: {name}")
 		
@@ -104,6 +108,23 @@ def silu_derivative(x: float | np.ndarray) -> float | np.ndarray:
 	B = 4 * np.cosh(x / 2.0) ** 2
 	return A / B + (1 / 2)
 
+#------ Gaussian error Linear Unit (GeLU) ------#
+
+def gelu(x: float | np.ndarray) -> float | np.ndarray:
+	"""
+	The Gaussian error Linear Unit (GeLU) is an activation function that combines properties of both ReLU and sigmoid functions.
+	It is defined as x * Φ(x), where Φ(x) is the cumulative distribution function of the standard normal distribution.
+	Practically, it can be approximated as:
+	GeLU(x) = 0.5 * x * (1 + tanh(√(2/π) * (x + 0.044715 * x^3)))
+	"""
+	return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
+
+def gelu_derivative(x: float | np.ndarray) -> float | np.ndarray:
+	"""Computes the derivative of the GeLU function."""
+	tanh_term = np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3))
+	derivative = 0.5 * (1 + tanh_term) + (0.5 * x * (1 - tanh_term ** 2) * (np.sqrt(2 / np.pi) * (1 + 3 * 0.044715 * x ** 2)))
+	return derivative
+
 
 ##============ Loss Functions ============##
 
@@ -121,7 +142,7 @@ def mean_squared_error_dr(predictions: np.ndarray, targets: np.ndarray) -> np.nd
 
 #------ Cross-Entropy Loss ------#
 
-def cross_entropy_loss(predictions: np.ndarray, targets: np.ndarray) -> float:
+def cross_entropy(predictions: np.ndarray, targets: np.ndarray) -> float:
 	"""The Cross-Entropy Loss function measures the performance of a classification model whose output is a probability value between 0 and 1."""
 
 	epsilon = 1e-15  # To prevent log(0)
@@ -129,7 +150,7 @@ def cross_entropy_loss(predictions: np.ndarray, targets: np.ndarray) -> float:
 	
 	return float(-np.mean(targets * np.log(predictions) + (1 - targets) * np.log(1 - predictions)))
 
-def cross_entropy_loss_dr(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:
+def cross_entropy_dr(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:
 	"""Computes the derivative of the Cross-Entropy Loss function with respect to the predictions."""
 	epsilon = 1e-15  # To prevent division by zero
 	predictions = np.clip(predictions, epsilon, 1 - epsilon)  # Clip predictions to avoid division by zero
