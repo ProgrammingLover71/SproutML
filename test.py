@@ -64,5 +64,5 @@ def test_gru_layer():
 
 
 if __name__ == "__main__":
-    #test_network()
+    test_network()
     test_gru_layer()
