@@ -18,12 +18,12 @@ def get_activation_function(name: activation_func):
 		return sigmoid
 	elif name == 'relu':
 		return relu
+	elif name == 'silu':
+		return silu
 	elif name == 'gelu':
 		return gelu
 	elif name == 'tanh':
 		return tanh
-	elif name == 'silu':
-		return silu
 	else:
 		raise ValueError(f"Unsupported activation function: {name}")
 	

@@ -2,7 +2,7 @@
 
 SproutML (or Sprout) is a machine learning (ML) library that allows developers to easily implement artificial intelligence in their projects. It is designed with simplicity, flexibility, and performance in mind, making it suitable for both beginners and experienced practitioners.
 
-The goal of SproutML is to reduce the complexity typically associated with machine learning by providing intuitive APIs, clear abstractions, and minimal setup. Whether you're building a simple predictive model or experimenting with more advanced techniques, Sprout aims to streamline the development process.
+The goal of Sprout is to reduce the complexity typically associated with machine learning by providing intuitive APIs, clear abstractions, and minimal setup. Whether you're building a simple predictive model or experimenting with more advanced techniques, Sprout aims to streamline the development process.
 
 # Key Features
 
@@ -12,7 +12,13 @@ The goal of SproutML is to reduce the complexity typically associated with machi
 - Lightweight and fast, with minimal dependencies
 - Designed for rapid prototyping and production use
 
-SproutML focuses on developer experience, allowing you to spend less time dealing with boilerplate and more time building intelligent systems.
+Sprout focuses on developer experience, allowing you to spend less time dealing with boilerplate and more time building intelligent systems.
+
+Sprout includes common models like:
+- Basic feed-forward neural networks
+- The neuroevolution algorithm (NEAT)
+- More complex neural networks, along with support for dense layers, GRU (gated recursive unit) layers.
+    * *Note: convolutional layers are in the works!*
 
 # Installation
 
@@ -47,7 +53,7 @@ print(net.forward([0, 1]))   # Should be close to yp
 
 # Philosophy
 
-SproutML is built around a few core principles:
+Sprout is built around a few core principles:
 
 - Simplicity over complexity
 - Readability over cleverness
@@ -62,7 +68,7 @@ SproutML is built around a few core principles:
 
 # Contributing
 
-Contributions are welcome. If you'd like to help improve SproutML, feel free to open issues or submit pull requests.
+Contributions are welcome. If you'd like to help improve Sprout, feel free to open issues or submit pull requests.
 
 # License
 
