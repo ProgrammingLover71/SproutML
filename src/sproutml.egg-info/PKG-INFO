@@ -1,0 +1,109 @@
+Metadata-Version: 2.4
+Name: sproutml
+Version: 0.1.0
+Summary: A small, easy-to-learn machine learning library
+Author-email: steak <abcbcalol69@gmail.com>
+Maintainer-email: steak <abcbcalol69@gmail.com>
+License: MIT
+Project-URL: Homepage, https://github.com/ProgrammingLover71/SproutML
+Project-URL: Repository, https://github.com/ProgrammingLover71/SproutML
+Project-URL: Issues, https://github.com/ProgrammingLover71/SproutML/issues
+Keywords: machine-learning,neat,neural-networks,evolution
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.21.0
+Dynamic: license-file
+
+# SproutML
+
+SproutML (or Sprout) is a machine learning (ML) library that allows developers to easily implement artificial intelligence in their projects. It is designed with simplicity, flexibility, and performance in mind, making it suitable for both beginners and experienced practitioners.
+
+The goal of Sprout is to reduce the complexity typically associated with machine learning by providing intuitive APIs, clear abstractions, and minimal setup. Whether you're building a simple predictive model or experimenting with more advanced techniques, Sprout aims to streamline the development process.
+
+# Key Features
+
+- Easy-to-use and consistent API
+- Modular architecture for extensibility
+- Support for common ML algorithms out of the box
+- Lightweight and fast, with minimal dependencies
+- Designed for rapid prototyping and production use
+
+Sprout focuses on developer experience, allowing you to spend less time dealing with boilerplate and more time building intelligent systems.
+
+Sprout includes common models like:
+- Basic feed-forward neural networks
+- The neuroevolution algorithm (NEAT)
+- More complex neural networks, along with support for dense layers, GRU (gated recursive unit) layers.
+    * *Note: convolutional layers are in the works!*
+
+# Installation
+
+Sprout can be installed in just one step:
+```bash
+py -m pip install sproutml
+```
+
+# Quick Example
+
+The following snippet shows how to create, use and train a small feed-forward neural network:
+
+```py
+from sproutml import NeuralNetwork, train
+
+net = NeuralNetwork(
+    [2, 3, 1],                      # The network will have 2 inputs, 3 hidden nodes and one output
+    activation_function = 'tanh',   # Sigmoid, ReLU, SiLU and GeLU are also supported
+    loss_function = 'cross-entropy' # MSE supported too
+)
+
+# Inputs
+X = [[0, 0], [0, 1], [1, 0], [1, 1]]
+# Predicted outputs
+yp = [[0], [1], [1], [0]]
+
+# show_msg = True makes the function display epoch numbers and the fitness every 100 epochs
+losses = train(net, X, yp, epochs = 1000, learning_rate = 0.15, show_msg = True)
+
+print(net.forward([0, 1]))   # Should be close to yp
+```
+
+# Philosophy
+
+Sprout is built around a few core principles:
+
+- Simplicity over complexity
+- Readability over cleverness
+- Practicality over completeness
+
+# Roadmap
+
+- Add support for more algorithms
+- Improve performance optimizations
+- Expand documentation and examples
+- Introduce model serialization and deployment tools
+
+# Contributing
+
+Contributions are welcome. If you'd like to help improve Sprout, feel free to open issues or submit pull requests.
+
+# License
+
+Copyright (c) 2026 steak
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

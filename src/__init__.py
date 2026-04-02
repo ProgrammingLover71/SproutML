@@ -1,7 +1,7 @@
 ##============ Imports ============##
 
-from src.activations import *
-from src.neural_network import *
-from src.neuroevolution import *
+from .activations import *
+from .neural_network import *
+from .neuroevolution import *
 
-import src.complex as complex_nn
+from .complex import *
