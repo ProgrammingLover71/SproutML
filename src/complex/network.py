@@ -17,35 +17,48 @@ class Network:
         self.layers = layers
 
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray, hidden_state: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Passes the input data through all layers of the network to compute the final output.
         
         Args:
             inputs (np.ndarray): The input data to the network.
+            hidden_state (np.ndarray | None): The initial hidden state for recurrent layers.
         
         Returns:
             np.ndarray: The output of the network after processing the input through all layers.
         """
         for layer in self.layers:
-            inputs = layer.forward(inputs)
-        return inputs
-    
+            inputs, hidden_state = layer.forward(inputs, hidden_state)
+        return inputs, hidden_state
 
-    def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
+
+    def backward(self, output_gradient: np.ndarray, eta: float, hidden_state: np.ndarray | None = None) -> np.ndarray:
         """
         Performs backpropagation through all layers of the network to compute gradients and update parameters.
         
         Args:
             output_gradient (np.ndarray): The gradient of the loss with respect to the output of the network.
             eta (float): The learning rate for parameter updates.
+            hidden_state (np.ndarray | None): The hidden state for recurrent layers.
         """
+        hidden_gradient = hidden_state
+
         for layer in reversed(self.layers):
-            output_gradient = layer.backward(output_gradient, eta)
+            output_gradient, hidden_gradient = layer.backward(output_gradient, eta, hidden_gradient)
         return output_gradient
     
 
-    def train(self, X: np.ndarray, y: np.ndarray, loss_function: loss_func, epochs: int, eta: float, show_progress: bool=True) -> list[float]:
+    def train(
+            self,
+            X: np.ndarray, 
+            y: np.ndarray, 
+            loss_function: loss_func, 
+            epochs: int, 
+            eta: float, 
+            show_progress: bool = True, 
+            hidden_state: np.ndarray | None = None
+        ) -> list[float]:
         """
         Trains the neural network on the provided dataset for a specified number of epochs.
         
@@ -56,6 +69,7 @@ class Network:
             epochs (int): The number of epochs to train the network.
             eta (float): The learning rate for parameter updates.
             show_progress (bool): Whether to display training progress.
+            hidden_state (np.ndarray | None): The initial hidden state for recurrent layers.
         
         Returns:
             list[float]: A list of loss values for each epoch during training.
@@ -64,16 +78,18 @@ class Network:
         loss_fn = get_loss_function(loss_function)
         loss_dr = get_loss_derivative(loss_function)
 
+        H = hidden_state
+
         losses = []
         for epoch in range(epochs):
         
-            output = self.forward(X)
+            output, H = self.forward(X, H)
 
             loss = loss_fn(output, y)
             losses.append(loss)
 
             output_gradient = loss_dr(output, y)
-            self.backward(output_gradient, eta)
+            self.backward(output_gradient, eta, H)
 
             if show_progress:
                 print(f'Epoch {epoch + 1}/{epochs}, Loss: {loss:.4f}')
@@ -81,7 +97,17 @@ class Network:
         return losses
     
 
-    def train_multi(self, X: list[np.ndarray] | np.ndarray, y: list[np.ndarray] | np.ndarray, loss_function: loss_func, generations: int, eta: float, num_epochs_per_generation: int, show_progress: bool=True) -> list[float]:
+    def train_multi(
+            self, 
+            X: list[np.ndarray] | np.ndarray, 
+            y: list[np.ndarray] | np.ndarray, 
+            loss_function: loss_func, 
+            generations: int, 
+            eta: float, 
+            num_epochs_per_generation: int, 
+            show_progress: bool = True,
+            hidden_state: np.ndarray | None = None
+        ) -> list[float]:
         """
         Trains the neural network on multiple input-target pairs for a specified number of epochs.
         
@@ -93,6 +119,7 @@ class Network:
             eta (float): The learning rate for parameter updates.
             num_epochs_per_generation (int): The number of epochs to train the network per generation.
             show_progress (bool): Whether to display training progress.
+            hidden_state (np.ndarray | None): The initial hidden state for recurrent layers.
         
         Returns:
             list[float]: A list of average loss values for each generation during training.
@@ -114,7 +141,7 @@ class Network:
 
             for X_i, y_i in zip(X_list, y_list):
 
-                ep_losses = self.train(X_i, y_i, loss_function, epochs=num_epochs_per_generation, eta=eta, show_progress=show_progress)
+                ep_losses = self.train(X_i, y_i, loss_function, epochs=num_epochs_per_generation, eta=eta, show_progress=show_progress, hidden_state=hidden_state)
                 losses.append(np.mean(ep_losses))
 
             if show_progress:

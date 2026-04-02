@@ -19,72 +19,33 @@ class Layer:
         pass
         
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray, hidden_state: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Passes the input data through the layer and computes the output. This method should be overridden by subclasses to implement specific layer behavior.
         
         Args:
             inputs (np.ndarray): The input data to the layer.
+            hidden_state (np.ndarray | None): The current hidden state for recurrent layers. Only used by recurrent layers, ignored by others.
         
         Returns:
             np.ndarray: The output of the layer after processing the input.
         """
-        return inputs
+        return inputs, hidden_state
 
 
-    def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
+    def backward(self, output_gradient: np.ndarray, eta: float, hidden_gradient: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Computes the gradient of the loss with respect to the inputs of the layer, given the gradient of the loss with respect to the outputs.
         
         Args:
             output_gradient (np.ndarray): The gradient of the loss with respect to the outputs of the layer.
             eta (float): The learning rate for parameter updates.
+            hidden_state (np.ndarray): The current hidden state for recurrent layers. Only used by recurrent layers, ignored by others.
         
         Returns:
             np.ndarray: The gradient of the loss with respect to the inputs of the layer.
         """
-        return output_gradient
-
-
-class RecurrentLayer(Layer):
-    """
-    Represents a recurrent neural network (RNN) layer.
-    This is a stub implementation used as a placeholder in the architecture.
-    Subclasses should implement specific recurrent cell behavior (e.g. SimpleRNN, LSTM, GRU).
-    """
-
-    def __init__(self, input_size: int, hidden_size: int):
-        super().__init__()
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.hidden_state = np.zeros((1, hidden_size))
-
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
-        """
-        Forward pass for recurrent layer over a batch/time sequence.
-        This base stub does not implement recurrence and must be overridden.
-
-        Args:
-            inputs (np.ndarray): Input sequence data.
-
-        Returns:
-            np.ndarray: Output sequence data.
-        """
-        raise NotImplementedError("RecurrentLayer.forward() should be implemented by a subclass")
-
-    def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
-        """
-        Backward pass for recurrent layer through time (BPTT).
-        This base stub does not implement recurrence and must be overridden.
-
-        Args:
-            output_gradient (np.ndarray): Gradient w.r.t. the output.
-            eta (float): Learning rate.
-
-        Returns:
-            np.ndarray: Gradient w.r.t. the input.
-        """
-        raise NotImplementedError("RecurrentLayer.backward() should be implemented by a subclass")
+        return output_gradient, hidden_gradient
 
 
 ##============ Layer subclasses ============##
@@ -97,7 +58,7 @@ class DenseLayer(Layer):
     Represents a fully connected (dense) layer in a neural network. This layer performs a linear transformation of the input data, followed by an optional activation function.
     """
 
-    def __init__(self, input_size: int, output_size: int, activation: activation_func = 'relu') -> None:
+    def __init__(self, input_size: int, output_size: int, activation: activation_func = 'tanh') -> None:
         """
         Initializes the DenseLayer with the specified input size, output size, and activation function.
         
@@ -118,13 +79,14 @@ class DenseLayer(Layer):
         self.weights = np.random.uniform(-1, 1, (input_size, output_size))
         self.biases  = np.random.uniform(-1, 1, (1, output_size))
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray, hidden_state: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Performs the forward pass through the dense layer, applying the linear transformation and activation function.
         
         Args:
             inputs (np.ndarray): The input data to the layer.
-        
+            hidden_state (np.ndarray | None): The current hidden state for recurrent layers. Only used by recurrent layers, ignored by others.
+
         Returns:
             np.ndarray: The output of the layer after processing the input.
         """
@@ -134,15 +96,16 @@ class DenseLayer(Layer):
         self.linear_output    = inputs @ self.weights + self.biases
         self.activated_output = self.activation(self.linear_output)
 
-        return self.activated_output    # type: ignore -- the return type will be np.ndarray, but the activation returns float or np.ndarray depending on the input
+        return self.activated_output, hidden_state    # type: ignore -- the return type will be np.ndarray, but the activation returns float or np.ndarray depending on the input
 
-    def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
+    def backward(self, output_gradient: np.ndarray, eta: float, hidden_gradient: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Computes the backward pass through the dense layer, calculating the gradients and updating the weights and biases.
         
         Args:
             output_gradient (np.ndarray): The gradient of the loss with respect to the outputs of the layer.
             eta (float): The learning rate for parameter updates.
+            hidden_gradient (np.ndarray | None): The gradient of the loss with respect to the hidden state.
 
         Returns:
             np.ndarray: The gradient of the loss with respect to the inputs of the layer.
@@ -161,13 +124,12 @@ class DenseLayer(Layer):
         self.weights -= eta * weights_gradient
         self.biases  -= eta * biases_gradient
 
-        return input_gradient
+        return input_gradient, hidden_gradient
 
 
-# ------ GRU Layer (imported) ------#
+# ------ Recurrent Layer ------#
 
-from src.complex.gru import GRULayer    # Import it here to avoid circular import
-
+from src.complex.recurrent import RecurrentLayer  # avoid circular import; import RecurrentLayer where needed
 
 # ------ Sigmoid Layer (Yes / No) ------#
 
@@ -176,33 +138,37 @@ class Sigmoid(Layer):
     Represents a sigmoid activation layer in a neural network. This layer applies the sigmoid activation function to the input data.
     """
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray, hidden_state: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Applies the sigmoid activation function to the input data.
         
         Args:
             inputs (np.ndarray): The input data to the layer.
+            hidden_state (np.ndarray | None): The current hidden state for recurrent layers. Only used by recurrent layers, ignored by others.
         
         Returns:
             np.ndarray: The output of the layer after applying the sigmoid activation function.
         """
         self.inputs = inputs
-        return 1 / (1 + np.exp(-inputs))
+        
+        # Ignore the hidden state, because we don't need to do anything to it
+        return 1 / (1 + np.exp(-inputs)), hidden_state
 
 
-    def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
+    def backward(self, output_gradient: np.ndarray, eta: float, hidden_gradient: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Computes the backward pass through the sigmoid layer, calculating the gradient of the loss with respect to the inputs.
         
         Args:
             output_gradient (np.ndarray): The gradient of the loss with respect to the outputs of the layer.
             eta (float): The learning rate for parameter updates (not used in this layer).
+            hidden_gradient (np.ndarray | None): The gradient of the loss with respect to the hidden state.
         
         Returns:
             np.ndarray: The gradient of the loss with respect to the inputs of the layer.
         """
-        sigmoid_output = self.forward(self.inputs)  # type: np.ndarray
-        return output_gradient * sigmoid_output * (1 - sigmoid_output)  # type: np.ndarray
+        sigmoid_output, H = self.forward(self.inputs, hidden_gradient)
+        return output_gradient * sigmoid_output * (1 - sigmoid_output), H  # type: tuple[np.ndarray, np.ndarray]
 
 
 # ------ Softmax Layer (Classification) ------#
@@ -213,12 +179,13 @@ class Softmax(Layer):
     This layer applies the softmax activation function to the input data, typically used for multi-class classification problems.
     """
 
-    def forward(self, inputs: np.ndarray) -> np.ndarray:
+    def forward(self, inputs: np.ndarray, hidden_state: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Applies the softmax activation function to the input data.
         
         Args:
             inputs (np.ndarray): The input data to the layer.
+            hidden_state (np.ndarray | None): The current hidden state for recurrent layers. Only used by recurrent layers, ignored by others.
         
         Returns:
             np.ndarray: The output of the layer after applying the softmax activation function.
@@ -228,19 +195,20 @@ class Softmax(Layer):
         exp_values    = np.exp(inputs - np.max(inputs, axis=1, keepdims=True))  # type: np.ndarray
         probabilities = exp_values / np.sum(exp_values, axis=1, keepdims=True)  # type: np.ndarray
 
-        return probabilities
+        return probabilities, hidden_state
     
 
-    def backward(self, output_gradient: np.ndarray, eta: float) -> np.ndarray:
+    def backward(self, output_gradient: np.ndarray, eta: float, hidden_gradient: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray | None]:
         """
         Computes the backward pass through the softmax layer, calculating the gradient of the loss with respect to the inputs.
         
         Args:
             output_gradient (np.ndarray): The gradient of the loss with respect to the outputs of the layer.
             eta (float): The learning rate for parameter updates (not used in this layer).
+            hidden_gradient (np.ndarray | None): The gradient of the loss with respect to the hidden state.
         
         Returns:
             np.ndarray: The gradient of the loss with respect to the inputs of the layer.
         """
-        softmax_output = self.forward(self.inputs)  # type: np.ndarray
-        return output_gradient * softmax_output * (1 - softmax_output)  # type: np.ndarray
+        softmax_output, H = self.forward(self.inputs, hidden_gradient)
+        return output_gradient * softmax_output * (1 - softmax_output), H  # type: np.ndarray
